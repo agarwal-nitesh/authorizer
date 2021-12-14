@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 
 	"github.com/authorizerdev/authorizer/server/constants"
 	"github.com/authorizerdev/authorizer/server/db"
@@ -67,11 +68,12 @@ func main() {
 	r.GET("/oauth_callback/:oauth_provider", handlers.OAuthCallbackHandler())
 
 	// login wall app related routes
-
-	r.LoadHTMLGlob("templates/*")
+	tplPath := os.Getenv("TEMPLATES_PATH")
+	appPath := os.Getenv("APP_PATH")
+	r.LoadHTMLGlob(tplPath + "/*")
 	app := r.Group("/app")
 	{
-		app.Static("/build", "app/build")
+		app.Static("/build", appPath+"/build")
 		app.GET("/", handlers.AppHandler())
 		app.GET("/reset-password", handlers.AppHandler())
 	}

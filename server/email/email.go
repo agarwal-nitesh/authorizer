@@ -2,13 +2,14 @@ package email
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"mime/quotedprintable"
-	"net/smtp"
-	"strings"
+	"strconv"
 
 	"github.com/authorizerdev/authorizer/server/constants"
+	gomail "gopkg.in/mail.v2"
 )
 
 /**
@@ -30,20 +31,38 @@ func NewSender() Sender {
 	return Sender{User: constants.SENDER_EMAIL, Password: constants.SENDER_PASSWORD}
 }
 
+// func (sender Sender) SendMail(Dest []string, Subject, bodyMessage string) error {
+// 	msg := "From: " + sender.User + "\n" +
+// 		"To: " + strings.Join(Dest, ",") + "\n" +
+// 		"Subject: " + Subject + "\n" + bodyMessage
+
+// 	err := smtp.SendMail(constants.SMTP_HOST+":"+constants.SMTP_PORT,
+// 		smtp.PlainAuth("", sender.User, sender.Password, constants.SMTP_HOST),
+// 		sender.User, Dest, []byte(msg))
+// 	if err != nil {
+
+// 		log.Printf("smtp error: %s", err)
+// 		return err
+// 	}
+
+// 	return nil
+// }
+
 func (sender Sender) SendMail(Dest []string, Subject, bodyMessage string) error {
-	msg := "From: " + sender.User + "\n" +
-		"To: " + strings.Join(Dest, ",") + "\n" +
-		"Subject: " + Subject + "\n" + bodyMessage
-
-	err := smtp.SendMail(constants.SMTP_HOST+":"+constants.SMTP_PORT,
-		smtp.PlainAuth("", sender.User, sender.Password, constants.SMTP_HOST),
-		sender.User, Dest, []byte(msg))
-	if err != nil {
-
+	m := gomail.NewMessage()
+	m.SetHeader("From", sender.User)
+	m.SetHeader("To", Dest...)
+	m.SetHeader("Subject", Subject)
+	m.SetBody("text/html", bodyMessage)
+	port, _ := strconv.Atoi(constants.SMTP_PORT)
+	d := gomail.NewDialer(constants.SMTP_HOST, port, sender.User, sender.Password)
+	if constants.ENV == "development" {
+		d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	if err := d.DialAndSend(m); err != nil {
 		log.Printf("smtp error: %s", err)
 		return err
 	}
-
 	return nil
 }
 
